@@ -10,33 +10,29 @@ espacio entre palabra y palabra.
 
 """
 import pandas as pd
-
+import re
 
 def ingest_data():
-    import re
+    filename = 'clusters_report.txt'
+    with open(filename, mode='r') as clusters_report:
+        report = clusters_report.readlines()
 
-    i = 0
-    dict_linea = {}
-    df = pd.DataFrame()
-    with open('./clusters_report.txt') as f:
-        for line in f:
+    clusters = []
+    cluster = [0, 0, 0, '']
 
-            line = re.sub(r"\s+", " ", line)
-            if len(line)>1 and i > 3:
-                if line.split()[0].isnumeric() == True:
-                    try: 
-                        dict_linea['principales_palabras_clave'] = ' '.join(dict_linea['principales_palabras_clave'])
-                        df = df.append(dict_linea, ignore_index=True)
-                    except: pass
-                    dict_linea = {'cluster': int(line.split()[0]),
-                                'cantidad_de_palabras_clave': int(line.split()[1]),
-                                'porcentaje_de_palabras_clave': float(line.split()[2].replace(',','.')),
-                                'principales_palabras_clave': line.split()[4:]}
-                else: 
-                    dict_linea['principales_palabras_clave'].append(' '.join(line.split()))
-            i += 1
-    dict_linea['principales_palabras_clave'] = ' '.join(dict_linea['principales_palabras_clave'])
-    df = df.append(dict_linea, ignore_index=True)
-    df['principales_palabras_clave'] = df['principales_palabras_clave'].str.rstrip('\.')
-    
+    for fila in report[4:]:
+        if re.match('^ +[0-9]+ +', fila):
+            lista = fila.split()
+            cluster = [int(lista[0]), int(lista[1]), float(lista[2].replace(',', '.')), ' '.join(lista[4:])]
+
+        elif re.match('^ +[a-z]', fila):
+            palabras = ' '.join(fila.split())
+            cluster[3] += ' ' + palabras
+
+        elif re.match('^\n|^\s*$', fila):
+            cluster[3] = cluster[3].replace('.', '')
+            clusters.append(cluster)
+            cluster = [0, 0, 0, '']
+
+    df = pd.DataFrame(clusters, columns=['cluster', 'cantidad_de_palabras_clave', 'porcentaje_de_palabras_clave', 'principales_palabras_clave'])
     return df
